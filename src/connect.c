@@ -1,15 +1,10 @@
 #include "include/style.h"
 #include "include/connect.h"
-#include "include/http.h"
-#include <sys/types.h>
 #include <string.h>
 #include <unistd.h>
 #include <arpa/inet.h>
-#include <netinet/in.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/poll.h>
-#include <sys/socket.h>
 
 
 // Return free slot or -1 if server is full
@@ -58,7 +53,7 @@ Server init_server() {
     }
 
     server.addr.sin_family = AF_INET;
-    server.addr.sin_addr.s_addr = INADDR_ANY;
+    server.addr.sin_addr.s_addr = ADDRESS;
     server.addr.sin_port = htons(PORT);
 
     if (bind(
@@ -152,21 +147,13 @@ Server handle_client(Server *server, int socket) {
 
     if (req_buffer_size <= 0) {
         char str[50];
-        if (req_buffer_size == 0) {
-            snprintf(str, sizeof(str), 
-                "%s:%d has disconnected\n", 
-                server->clients[slot].addr,
-                server->clients[slot].port
-            );
-            print_info(INFO, str);
-        } else {
-            snprintf(str, sizeof(str), 
-                "%s:%d has crashed\n", 
-                server->clients[slot].addr,
-                server->clients[slot].port
-            );
-            print_info(ERROR, str);
-        }
+        snprintf(str, sizeof(str), 
+            "%s:%d has disconnected\n", 
+            server->clients[slot].addr,
+            server->clients[slot].port
+        );
+        print_info(INFO, str);
+
         close(server->fds[socket].fd);
         server->clients[slot].fd = -1;
         server->clients[slot].state = STATE_DISCONNECTED;

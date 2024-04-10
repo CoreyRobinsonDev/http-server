@@ -6,8 +6,10 @@
 #include <stdbool.h>
 #include <sys/socket.h>
 #include <poll.h>
+#include <netinet/in.h>
 
 #define MAX_CLIENTS 256
+#define ADDRESS INADDR_ANY
 #define PORT 8080
 #define LISTEN_QUEUE 50
 
