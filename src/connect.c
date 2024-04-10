@@ -1,8 +1,14 @@
+#include "include/style.h"
 #include "include/connect.h"
-#include <asm-generic/socket.h>
+#include "include/http.h"
+#include <sys/types.h>
+#include <string.h>
+#include <unistd.h>
+#include <arpa/inet.h>
 #include <netinet/in.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/poll.h>
 #include <sys/socket.h>
 
 
@@ -29,6 +35,11 @@ int find_slot_by_fd(Server server, int fd) {
 Server init_server() {
     Server server = {0};
     server.opt = 1;
+
+    for (int i = 0; i < MAX_CLIENTS; i++) {
+        server.clients[i].fd = -1;
+        server.clients[i].state = STATE_NEW;
+    }
 
     if ((server.listen_fd = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
         perror("socket");
@@ -63,7 +74,10 @@ Server init_server() {
         perror("listen");
         exit(EXIT_FAILURE);
     }
-    printf("Server listening on port %d...\n", PORT);
+
+    char str[50];
+    snprintf(str, sizeof(str), "Server listening on port %d...", PORT);
+    print_info(INFO, str);
 
     server.fds[0].fd = server.listen_fd;
     server.fds[0].events = POLLIN;
@@ -71,3 +85,162 @@ Server init_server() {
 
     return server;
 }
+
+bool accept_client(Server *server) {
+    if (!(server->fds[0].revents & POLLIN)) return false;
+
+    socklen_t client_len = sizeof(server->client_addr);
+    if ((server->conn_fd = accept(
+        server->listen_fd,
+        (struct sockaddr*)&server->client_addr,
+        &client_len
+    )) == -1) {
+        perror("accept");
+    }
+
+    return true;
+}
+
+void connect_client(Server *server) {
+    int free_slot = find_free_slot(*server);
+    if (free_slot == -1) {
+        // TODO: Add real response
+        Response res = {
+            .header = {0},
+            .body = "Server Full"
+        };
+        if (send(server->conn_fd, &res, sizeof(res), MSG_CONFIRM) == -1) {
+            perror("send");
+        }
+        close(server->conn_fd);
+    } else {
+        server->clients[free_slot].fd = server->conn_fd;
+        server->clients[free_slot].state = STATE_CONNECTED;
+        server->clients[free_slot].addr = inet_ntoa(
+            server->client_addr.sin_addr
+        );
+        server->clients[free_slot].port = ntohs(
+            server->client_addr.sin_port
+        );
+        server->fds[free_slot+1].fd = server->clients[free_slot].fd;
+        server->fds[free_slot+1].events = POLLIN;
+        server->nfds++;
+    }
+}
+
+Server handle_client(Server *server, int socket) {
+    int slot = find_slot_by_fd(*server, server->fds[socket].fd);
+    if (slot == -1) {
+        char str[50];
+        snprintf(str, sizeof(str), "No fd found at socket %d\n", socket);
+        print_info(ERROR, str);
+        return *server;
+    }
+
+    Response res = {
+        .header = {0},
+        .body = "Hello, World!"
+    };
+
+    char req_buffer[(BUFF_SIZE*2)+1] = {0};
+    ssize_t req_buffer_size = recv(
+        server->fds[socket].fd,
+        &req_buffer,
+        sizeof(req_buffer) - 1,
+        0
+    );
+
+    if (req_buffer_size <= 0) {
+        char str[50];
+        if (req_buffer_size == 0) {
+            snprintf(str, sizeof(str), 
+                "%s:%d has disconnected\n", 
+                server->clients[slot].addr,
+                server->clients[slot].port
+            );
+            print_info(INFO, str);
+        } else {
+            snprintf(str, sizeof(str), 
+                "%s:%d has crashed\n", 
+                server->clients[slot].addr,
+                server->clients[slot].port
+            );
+            print_info(ERROR, str);
+        }
+        close(server->fds[socket].fd);
+        server->clients[slot].fd = -1;
+        server->clients[slot].state = STATE_DISCONNECTED;
+        memset(&server->clients[slot].addr, '\0', sizeof(server->clients[slot].addr));
+        server->clients[slot].port = 0;
+        server->nfds--;
+    } else {
+        printf(
+            "\t\t===[%s:%d]===\n",
+            server->clients[slot].addr,
+            server->clients[slot].port
+        );
+        printf("%s\n", req_buffer);
+        printf(
+            "\t\t===[%s:%d]===\n",
+            server->clients[slot].addr,
+            server->clients[slot].port
+        );
+        if (send(server->clients[slot].fd, &res, sizeof(res), MSG_CONFIRM) == -1) {
+            perror("send");
+        }
+        close(server->clients[slot].fd);
+    } 
+    memset(&req_buffer, '\0', sizeof(req_buffer));
+
+    return *server;
+}
+
+Server start_server(Server *server) {
+    server->nfds = 1; 
+
+    while(true) {
+        int n_events = poll(server->fds, server->nfds, -1);
+        if (n_events == -1) {
+            perror("poll");
+            exit(EXIT_FAILURE);
+        }
+
+        if (accept_client(server)) {
+            connect_client(server);
+            n_events--;
+        }
+
+        for (int i = 1; i <= server->nfds && n_events > 0; i++) {
+            if (server->fds[i].revents & POLLIN) {
+                n_events--;
+                *server = handle_client(server, i);
+            }
+        }
+    }
+
+    return *server;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

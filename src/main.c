@@ -8,6 +8,7 @@ int main(int argc, char* argv[]) {
     printf("UTC: %s\n", asctime(gmtime(&t)));
 
     Server server =  init_server();
+    start_server(&server);
 
     exit(EXIT_SUCCESS);
 }
