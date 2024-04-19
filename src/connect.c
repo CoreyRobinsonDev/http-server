@@ -1,3 +1,4 @@
+#include "include/http.h"
 #include "include/style.h"
 #include "include/connect.h"
 #include <string.h>
@@ -132,27 +133,29 @@ Server handle_client(Server *server, int socket) {
         return *server;
     }
 
+    char term_out[50];
+    char req_buf[(BUFF_SIZE*2)+1] = {0};
+
+    ssize_t req_buffer_size = recv(
+        server->fds[socket].fd,
+        &req_buf,
+        sizeof(req_buf) - 1,
+        0
+    );
+
+    Request req = parse_req(req_buf);
     Response res = {
         .header = {0},
         .body = "Hello, World!"
     };
 
-    char req_buffer[(BUFF_SIZE*2)+1] = {0};
-    ssize_t req_buffer_size = recv(
-        server->fds[socket].fd,
-        &req_buffer,
-        sizeof(req_buffer) - 1,
-        0
-    );
-
     if (req_buffer_size <= 0) {
-        char str[50];
-        snprintf(str, sizeof(str), 
+        snprintf(term_out, sizeof(term_out), 
             "%s:%d has disconnected\n", 
             server->clients[slot].addr,
             server->clients[slot].port
         );
-        print_info(INFO, str);
+        print_info(INFO, term_out);
 
         close(server->fds[socket].fd);
         server->clients[slot].fd = -1;
@@ -166,7 +169,7 @@ Server handle_client(Server *server, int socket) {
             server->clients[slot].addr,
             server->clients[slot].port
         );
-        printf("%s\n", req_buffer);
+        printf("%s\n", req_buf);
         printf(
             "\t\t===[%s:%d]===\n",
             server->clients[slot].addr,
@@ -177,7 +180,7 @@ Server handle_client(Server *server, int socket) {
         }
         close(server->clients[slot].fd);
     } 
-    memset(&req_buffer, '\0', sizeof(req_buffer));
+    memset(&req_buf, '\0', sizeof(req_buf));
 
     return *server;
 }

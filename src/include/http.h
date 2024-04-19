@@ -6,9 +6,11 @@
 #include <time.h>
 
 #define BUFF_SIZE 2048
+#define URI_MAX_BUFF 2048
 #define VERSION "HTTP/1.1"
 
 typedef enum: uint8_t {
+    INVALID_METHOD,
     GET,
     POST,
     PUT,
@@ -17,8 +19,15 @@ typedef enum: uint8_t {
     CONNECT,
     OPTIONS,
     TRACE,
-    HEAD
+    HEAD,
 } HTTPMethod;
+
+typedef enum: uint8_t {
+    INVALID_TYPE,
+    JSON,       // application/json
+    HTML,       // text/html
+    TEXT,       // text/plain
+} ContentType;
 
 #define STATUS_CODES\
     X(OK,200)\
@@ -48,12 +57,20 @@ typedef enum {
 
 typedef struct {
     char header[BUFF_SIZE+1];
-    char body[BUFF_SIZE+1];
+    char payload[BUFF_SIZE+1];
+    ContentType content_type;
+    HTTPMethod method;
+    char path[(URI_MAX_BUFF/2)+1];
+    char query_parms[(URI_MAX_BUFF/2)+1];
+    char version[10];
 } Request;
 
 typedef struct {
     char header[BUFF_SIZE+1];
     char body[BUFF_SIZE+1];
 } Response;
+
+Request parse_req(char *req_buf);
+void print_req(Request req);
 
 #endif // !HTTP_H
