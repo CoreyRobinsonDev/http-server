@@ -157,12 +157,6 @@ Server handle_client(Server *server, int socket) {
         );
         print_info(INFO, term_out);
 
-        close(server->fds[socket].fd);
-        server->clients[slot].fd = -1;
-        server->clients[slot].state = STATE_DISCONNECTED;
-        memset(&server->clients[slot].addr, '\0', sizeof(server->clients[slot].addr));
-        server->clients[slot].port = 0;
-        server->nfds--;
     } else {
         printf(
             "\t\t===[%s:%d]===\n",
@@ -178,8 +172,13 @@ Server handle_client(Server *server, int socket) {
         if (send(server->clients[slot].fd, &res, sizeof(res), MSG_CONFIRM) == -1) {
             perror("send");
         }
-        close(server->clients[slot].fd);
     } 
+    close(server->fds[socket].fd);
+    server->clients[slot].fd = -1;
+    server->clients[slot].state = STATE_DISCONNECTED;
+    memset(&server->clients[slot].addr, '\0', sizeof(server->clients[slot].addr));
+    server->clients[slot].port = 0;
+    server->nfds--;
     memset(&req_buf, '\0', sizeof(req_buf));
 
     return *server;
@@ -197,7 +196,6 @@ Server start_server(Server *server) {
 
         if (accept_client(server)) {
             connect_client(server);
-            n_events--;
         }
 
         for (int i = 1; i <= server->nfds && n_events > 0; i++) {

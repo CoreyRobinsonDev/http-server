@@ -1,9 +1,12 @@
 #include "include/connect.h"
+#include "include/style.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
+
 
 int main(int argc, char* argv[]) {
+    print_loading_bar();
+
     time_t t = time(NULL);
     printf("UTC: %s\n", asctime(gmtime(&t)));
 

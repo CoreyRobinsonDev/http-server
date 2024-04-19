@@ -1,6 +1,9 @@
 #ifndef STYLE_H
 #define STYLE_H
 
+#define clear() printf("\033[H\033[J")
+#define gotoxy(x,y) printf("\033[%d;%dH", (y), (x))
+
 #define LABELS\
     X(INFO)\
     X(ERROR)\
@@ -25,5 +28,6 @@ typedef enum {
 #define ESC "\033[1;0m"
 
 void print_info(Label label, const char *msg);
+void print_loading_bar();
 
 #endif // !STYLE_H
