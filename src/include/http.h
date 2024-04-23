@@ -7,6 +7,8 @@
 
 #define BUFF_SIZE 2048
 #define URI_MAX_BUFF 2048
+#define MAX_COOKIE_BUFF 128
+#define MAX_COOKIES 8
 #define VERSION "HTTP/1.1"
 
 typedef enum: uint8_t {
@@ -56,13 +58,14 @@ typedef enum {
 
 
 typedef struct {
-    char header[BUFF_SIZE+1];
     char payload[BUFF_SIZE+1];
     ContentType content_type;
     HTTPMethod method;
-    char path[(URI_MAX_BUFF/2)+1];
-    char query_parms[(URI_MAX_BUFF/2)+1];
-    char version[10];
+    char path[URI_MAX_BUFF+1];
+    char version[16];
+    int content_len;
+    char cookies[MAX_COOKIES][MAX_COOKIE_BUFF];
+    char host[64];
 } Request;
 
 typedef struct {

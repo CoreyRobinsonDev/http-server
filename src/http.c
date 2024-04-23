@@ -1,6 +1,8 @@
 #include "include/http.h"
-#include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
+#include <stdbool.h>
+#include <stdio.h>
 #include <string.h>
 
 char *HTTPStatusMsg[] = {
@@ -58,6 +60,101 @@ void set_content_type(Request *req, char *content_type) {
 }
 
 Request parse_req(char *req_buf) {
+    Request req = {0};
+    char line[BUFF_SIZE]; 
+    bool req_line = true;
+
+    for (int i = 0; req_buf[i] != '\0'; i++) {
+        memset(line, '\0', sizeof(char) * BUFF_SIZE);
+        for (int ii = 0; req_buf[i] != '\n'; i++) {
+            line[ii] = req_buf[i];
+            ii++;
+        }
+
+        // parse body
+        if (strncmp(line, "\r", sizeof(char)) == 0) {
+            i++;
+            for (int ii = 0; req_buf[i] != '\0'; i++, ii++) {
+                req.payload[ii] = req_buf[i];
+            }
+        }
+ 
+        // first line
+        if (req_line) {
+            req_line = false;
+            char word[URI_MAX_BUFF];
+            int iter = 0;
+
+            for (int ii = 0; line[ii] != '\0'; ii++) {
+                memset(word, '\0', sizeof(word));
+                iter++;
+                for (int iii = 0; line[ii] != ' ' && line[ii] != '\0'; iii++) {
+                    word[iii] = line[ii];
+                    ii++;
+                }
+                switch(iter) {
+                    case 1: 
+                        set_method(&req,  word);
+                        break;
+                    case 2:
+                        strncpy(req.path, word, sizeof(req.path));
+                        break;
+                    case 3:
+                        strncpy(req.version, word, sizeof(req.version));
+                        break;
+                    default: break;
+                }
+            }
+        // parse header
+        } else {
+            char key[128];
+            char value[256];
+            int ii = 0;
+            memset(key, '\0', sizeof(key));
+            memset(value, '\0', sizeof(value));
+
+            for (; line[ii] != ':' && line[ii] != '\0'; ii++) {
+                key[ii] = line[ii]; 
+            }
+            ii += 2;
+
+            for (int iii = 0; line[ii] != '\n' && line[ii] != '\0'; ii++) {
+                value[iii] = line[ii];
+                iii++;
+            }
+
+            // key-value check
+            if (strncmp(key, "Content-Type", sizeof("Content-Type")) == 0) {
+                set_content_type(&req, value);
+            } else if (strncmp(key, "Content-Length", sizeof("Content-Length")) == 0) {
+                req.content_len = (int)strtol(value, (char**)NULL, 10);
+            } else if (strncmp(key, "Cookie", sizeof("Cookie")) == 0) {
+                int val_len = strnlen(value, 256);
+                value[val_len] = ';';
+                int count = 0;
+                char cookie[MAX_COOKIE_BUFF];
+                memset(cookie, '\0', sizeof(cookie));
+
+                for (int ii = 0,iii = 0; value[ii] != '\0'; ii++,iii++) {
+                    if (value[ii] == ';') {
+                        ii += 2;
+                        iii = 0;
+                        strncpy(req.cookies[count], cookie, sizeof(char) * MAX_COOKIE_BUFF);
+                        memset(cookie, '\0', sizeof(cookie));
+                        count++;
+                        if (count == MAX_COOKIES) break;
+                    }
+                    cookie[iii] = value[ii];
+                }
+            } else if (strncmp(key, "Host", sizeof("Host")) == 0) {
+                strncpy(req.host, value, sizeof(req.host));
+            }
+        }
+    }
+
+    print_req(req);
+
+    return req;
 }
 
 // Prints given [Request];
@@ -86,14 +183,19 @@ void print_req(Request req) {
     }
 
     printf("Request {\n");
-    printf("\t header =\n"); 
-    printf("%s\n", req.header);
-    printf("\t payload = %s\n", req.payload);
+    printf("\t payload = \n"); 
+    printf("%s\n", req.payload);
     printf("\t method = %s\n", method);
     printf("\t content_type = %s\n", content_type);
+    printf("\t content_len = %d\n", req.content_len);
     printf("\t path = %s\n", req.path);
-    printf("\t query_parms = %s\n", req.query_parms);
     printf("\t version = %s\n", req.version);
+    printf("\t cookies = \n");
+    for (int i = 0; i < MAX_COOKIES; i++) {
+        if (req.cookies[i] == NULL || strnlen(req.cookies[i], MAX_COOKIE_BUFF) == 0) break;
+        printf("\t\t %s\n", req.cookies[i]);
+    }
+    printf("\t host = %s\n", req.host);
     printf("}\n");
 
 }

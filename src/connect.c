@@ -99,6 +99,8 @@ bool accept_client(Server *server) {
 
 void connect_client(Server *server) {
     int free_slot = find_free_slot(*server);
+    char term_out[50];
+
     if (free_slot == -1) {
         // TODO: Add real response
         Response res = {
@@ -121,6 +123,13 @@ void connect_client(Server *server) {
         server->fds[free_slot+1].fd = server->clients[free_slot].fd;
         server->fds[free_slot+1].events = POLLIN;
         server->nfds++;
+
+        snprintf(term_out, sizeof(term_out), 
+            "%s:%d has connected\n", 
+            server->clients[free_slot].addr,
+            server->clients[free_slot].port
+        );
+        print_info(INFO, term_out);
     }
 }
 
@@ -155,23 +164,20 @@ Server handle_client(Server *server, int socket) {
             server->clients[slot].addr,
             server->clients[slot].port
         );
-        print_info(INFO, term_out);
-
+        print_info(ERROR, term_out);
     } else {
-        printf(
-            "\t\t===[%s:%d]===\n",
-            server->clients[slot].addr,
-            server->clients[slot].port
-        );
+
         printf("%s\n", req_buf);
-        printf(
-            "\t\t===[%s:%d]===\n",
-            server->clients[slot].addr,
-            server->clients[slot].port
-        );
         if (send(server->clients[slot].fd, &res, sizeof(res), MSG_CONFIRM) == -1) {
             perror("send");
         }
+
+        snprintf(term_out, sizeof(term_out), 
+            "%s:%d has disconnected\n", 
+            server->clients[slot].addr,
+            server->clients[slot].port
+        );
+        print_info(INFO, term_out);
     } 
     close(server->fds[socket].fd);
     server->clients[slot].fd = -1;

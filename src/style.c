@@ -33,14 +33,14 @@ void print_loading_bar() {
     char str[str_len+1];
     char* text = "starting server ";
     memset(&str, '\0', sizeof(char) * str_len+1);
-    memset(&str, '.', sizeof(char) * str_len);
+    memset(&str, ' ', sizeof(char) * str_len);
 
-    printf("%s[%s]\n", text, str);
+    printf("%s%s[%s%s%s]%s\n", BOLD, text, BLUE, str, ESC, ESC);
     for (int i = 0; i < str_len; i++) {
         gotoxy(0, 0);
         usleep(250 * (i*10));
         str[i] = '#';
-        printf("%s[%s]\n", text, str);
+        printf("%s%s[%s%s%s]%s\n", BOLD, text, BLUE, str, ESC, ESC);
     }
     clear();
 }
