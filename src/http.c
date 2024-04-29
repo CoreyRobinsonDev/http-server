@@ -1,29 +1,129 @@
 #include "include/http.h"
+#include "include/style.h"
 #include <stdlib.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
 
-char *HTTPStatusMsg[] = {
-    [OK] = "OK",
-    [CREATED] = "Created",
-    [NO_CONTENT] = "No Content",
-    [BAD_REQUEST] = "Bad Request",
-    [UNAUTHORIZED] = "Unauthorized",
-    [FORBIDDEN] = "Forbidden",
-    [NOT_FOUND] = "Not Found",
-    [METHOD_NOT_ALLOWED] = "Method Not Allowed",
-    [CONFLICT] = "Conflict",
-    [GONE] = "Gone",
-    [URI_TOO_LONG] = "URI Too Lont",
-    [UNSUPPORTED_MEDIA_TYPE] = "Unsupported Media Tyep",
-    [TOO_MANY_REQUESTS] = "Too Many Request",
-    [INTERNAL_SERVER_ERROR] = "Internal Server Error",
-    [NOT_IMPLEMENTED] = "Not Immplemented",
-    [SERVICE_UNAVAILABLE] = "Service Unavailable",
-    [HTTP_VERSION_NOT_SUPPORTED] = "HTTP Version Not Supported",
-};
+Response init_res() {
+    time_t t = time(NULL);
+    Response res = {
+        .version = VERSION,
+        .status_code = OK,
+        .status_msg = "OK",
+        .date = asctime(gmtime(&t)),
+        .server = 'C',
+        .content_len = 0,
+        .content_type = TEXT,
+        .payload = {0},
+        .set_status = set_status,
+        .set_payload = set_payload,
+        .to_string = response_to_string,
+    };
+
+    return res;
+}
+
+char* response_to_string(Response res) {
+    return "";
+}
+
+void set_payload(Response *self, char *filename) {
+    char path[64] = "payloads/"; 
+    strncat(path, filename, sizeof(char) * strnlen(filename, 64));
+    char* extension = strrchr(filename, '.'); 
+    if (extension == NULL) return;
+    extension = &extension[1];
+
+    // set content_type
+    if (strncmp(extension, "txt", sizeof("txt")) == 0) {
+        self->content_type = TEXT;
+    } else if (strncmp(extension, "json", sizeof("json")) == 0) {
+        self->content_type = JSON;
+    } else if (strncmp(extension, "html", sizeof("html")) == 0) {
+        self->content_type = HTML;
+    }
+
+    // set payload
+    FILE *file = fopen(path, "r");
+    if (file == NULL) {
+        char str[50];
+        snprintf(str, sizeof(str), "\"%s\" could not be found", path);
+        print_info(ERROR, str);
+        return;
+    }
+
+    fgets(self->payload, BUFF_SIZE, file);
+    printf("%s\n", self->payload);
+
+    fclose(file);
+}
+
+void set_status(Response *self, StatusCode status_code) {
+    self->status_code = status_code;
+    switch (status_code) {
+        case OK:
+            self->status_msg = "OK";
+            break;
+        case CREATED:
+            self->status_msg = "Created";
+            break;
+        case NO_CONTENT:
+            self->status_msg = "No Content";
+            break;
+        case BAD_REQUEST:
+            self->status_msg = "Bad Request";
+            break;
+        case UNAUTHORIZED:
+            self->status_msg = "Unauthorized";
+            break;
+        case FORBIDDEN:
+            self->status_msg = "Forbidden";
+            break;
+        case NOT_FOUND:
+            self->status_msg = "Not Found";
+            break;
+        case METHOD_NOT_ALLOWED:
+            self->status_msg = "Method Not Allowed";
+            break;
+        case CONFLICT:
+            self->status_msg = "Conflict";
+            break;
+        case GONE:
+            self->status_msg = "Gone";
+            break;
+        case URI_TOO_LONG:
+            self->status_msg = "URI Too Long";
+            break;
+        case UNSUPPORTED_MEDIA_TYPE:
+            self->status_msg = "Unsupported Media Type";
+            break;
+        case TOO_MANY_REQUESTS:
+            self->status_msg = "Too Many Requests";
+            break;
+        case INTERNAL_SERVER_ERROR:
+            self->status_msg = "Internal Server Error";
+            break;
+        case NOT_IMPLEMENTED:
+            self->status_msg = "Not Implemented";
+            break;
+        case SERVICE_UNAVAILABLE:
+            self->status_msg = "Service Unabailable";
+            break;
+        case HTTP_VERSION_NOT_SUPPORTED:
+            self->status_msg = "HTTP Version Not Supported";
+            break;
+    }
+}
+
+
+Response generate_response(Request req) {
+    Response res = init_res();
+
+
+    return res;
+}
 
 void set_method(Request *req, char *method) {
     switch(method[0]) {
@@ -59,6 +159,7 @@ void set_content_type(Request *req, char *content_type) {
     }
 }
 
+// Parse [req_buf] into a [Request]
 Request parse_req(char *req_buf) {
     Request req = {0};
     char line[BUFF_SIZE]; 
@@ -79,7 +180,7 @@ Request parse_req(char *req_buf) {
             }
         }
  
-        // first line
+        // parse request line
         if (req_line) {
             req_line = false;
             char word[URI_MAX_BUFF];
@@ -184,7 +285,7 @@ void print_req(Request req) {
 
     printf("Request {\n");
     printf("\t payload = \n"); 
-    printf("%s\n", req.payload);
+    printf("\t %s\n", req.payload);
     printf("\t method = %s\n", method);
     printf("\t content_type = %s\n", content_type);
     printf("\t content_len = %d\n", req.content_len);

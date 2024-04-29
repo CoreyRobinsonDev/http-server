@@ -103,10 +103,8 @@ void connect_client(Server *server) {
 
     if (free_slot == -1) {
         // TODO: Add real response
-        Response res = {
-            .header = {0},
-            .body = "Server Full"
-        };
+        Response res = init_res();
+
         if (send(server->conn_fd, &res, sizeof(res), MSG_CONFIRM) == -1) {
             perror("send");
         }
@@ -153,21 +151,19 @@ Server handle_client(Server *server, int socket) {
     );
 
     Request req = parse_req(req_buf);
-    Response res = {
-        .header = {0},
-        .body = "Hello, World!"
-    };
+    Response res = {0};
 
     if (req_buffer_size <= 0) {
         snprintf(term_out, sizeof(term_out), 
-            "%s:%d has disconnected\n", 
+            "%s:%d has crashed\n", 
             server->clients[slot].addr,
             server->clients[slot].port
         );
         print_info(ERROR, term_out);
     } else {
 
-        printf("%s\n", req_buf);
+        res = generate_response(req);
+
         if (send(server->clients[slot].fd, &res, sizeof(res), MSG_CONFIRM) == -1) {
             perror("send");
         }

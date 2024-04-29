@@ -53,7 +53,7 @@ typedef enum: uint8_t {
 #define X(name,code) name = code,
 typedef enum {
     STATUS_CODES
-} HTTPStatusCode;
+} StatusCode;
 #undef X
 
 
@@ -68,12 +68,29 @@ typedef struct {
     char host[64];
 } Request;
 
-typedef struct {
-    char header[BUFF_SIZE+1];
-    char body[BUFF_SIZE+1];
+typedef struct response_t {
+    char version[16];
+    StatusCode status_code;
+    char* status_msg;
+    char* date;
+    char server;
+    int content_len;
+    ContentType content_type;
+    char payload[BUFF_SIZE+1];
+    void (*set_status)(struct response_t* self, StatusCode);
+    void (*set_payload)(struct response_t* self, char*);
+    char* (*to_string)(struct response_t self);
 } Response;
 
 Request parse_req(char *req_buf);
+Response generate_response(Request req);
+char* parse_res(Response res);
 void print_req(Request req);
+void print_res(Response res);
+Response init_res();
+void set_status(Response* self, StatusCode status_code);
+void set_payload(Response* self, char* filename);
+char* response_to_string(Response res);
+
 
 #endif // !HTTP_H

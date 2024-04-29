@@ -7,6 +7,10 @@
 char *label_str[] = {
     LABELS
 };
+#undef X
+
+// Print log info to the terminal.
+// Log info may be prefixed by a [Label]
 void print_info(Label label, const char *msg) {
     char *color = {0};
 
