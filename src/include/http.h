@@ -79,7 +79,6 @@ typedef struct response_t {
     char payload[BUFF_SIZE+1];
     void (*set_status)(struct response_t* self, StatusCode);
     void (*set_payload)(struct response_t* self, char*);
-    char* (*to_string)(struct response_t self);
 } Response;
 
 Request parse_req(char *req_buf);
@@ -90,7 +89,6 @@ void print_res(Response res);
 Response init_res();
 void set_status(Response* self, StatusCode status_code);
 void set_payload(Response* self, char* filename);
-char* response_to_string(Response res);
 
 
 #endif // !HTTP_H

@@ -161,12 +161,53 @@ Server handle_client(Server *server, int socket) {
         );
         print_info(ERROR, term_out);
     } else {
-
         res = generate_response(req);
+        char* res_msg = calloc(2, BUFF_SIZE); 
 
-        if (send(server->clients[slot].fd, &res, sizeof(res), MSG_CONFIRM) == -1) {
+        // response to string
+        strncat(res_msg, res.version, sizeof(char) * strlen(res.version));
+        strncat(res_msg, " ", sizeof(" "));
+        char status_code[3] = {0};
+        sprintf(status_code,"%d", res.status_code);
+        strncat(res_msg, status_code, strlen(status_code));
+        strncat(res_msg, " ", sizeof(" "));
+        strncat(res_msg, res.status_msg, sizeof(char) * strlen(res.status_msg));
+        strncat(res_msg, "\r\n", sizeof("\r\n"));
+        strncat(res_msg, "Server: C\r\n", sizeof("Server: C\r\n"));
+        strncat(res_msg, "Date: ", sizeof("Date: "));
+        strncat(res_msg, res.date, sizeof(char) * strlen(res.date));
+        strncat(res_msg, "\r\n", sizeof("\r\n"));
+
+        if (strnlen(res.payload, BUFF_SIZE) > 0 && res.content_type != INVALID_TYPE) {
+            strncat(res_msg, "Content-Type: ", sizeof("Content-Type: "));
+            switch(res.content_type) {
+                case TEXT:
+                    strncat(res_msg, "text/plain\r\n", sizeof("text/plain\r\n"));
+                    break;
+                case JSON:
+                    strncat(res_msg, "application/json\r\n", sizeof("application/json\r\n"));
+                    break;
+                case HTML:
+                    strncat(res_msg, "text/html\r\n", sizeof("text/html\r\n"));
+                    break;
+                default: break;
+            }
+            strncat(res_msg, "Content-Length: ", sizeof("Content-Length: "));
+            char content_len[5] = {0};
+            sprintf(content_len, "%lu", strnlen(res.payload, BUFF_SIZE));
+            strncat(res_msg, content_len, 5);
+            strncat(res_msg, "\r\n\r\n", sizeof("\r\n\r\n"));
+            strncat(res_msg, res.payload, sizeof(char) * strnlen(res.payload, BUFF_SIZE));
+            strncat(res_msg, "\r\n", sizeof("\r\n"));
+        }
+        strncat(res_msg, "\r\n", sizeof("\r\n"));
+        printf("%s\n", res_msg);
+
+        if (send(server->clients[slot].fd, res_msg, sizeof(char) * strlen(res_msg), 0) == -1) {
             perror("send");
         }
+
+        free(res_msg);
 
         snprintf(term_out, sizeof(term_out), 
             "%s:%d has disconnected\n", 

@@ -1,10 +1,24 @@
 #include "include/http.h"
 #include "include/style.h"
+#include <bits/types/struct_iovec.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
+
+Response generate_response(Request req) {
+    Response res = init_res();
+
+    if (strncmp(req.version, VERSION, sizeof(VERSION)) != 0) {
+        res.set_status(&res, HTTP_VERSION_NOT_SUPPORTED);
+        return res;
+    }
+    res.set_payload(&res, "hello.txt");
+
+
+    return res;
+}
 
 Response init_res() {
     time_t t = time(NULL);
@@ -19,14 +33,9 @@ Response init_res() {
         .payload = {0},
         .set_status = set_status,
         .set_payload = set_payload,
-        .to_string = response_to_string,
     };
 
     return res;
-}
-
-char* response_to_string(Response res) {
-    return "";
 }
 
 void set_payload(Response *self, char *filename) {
@@ -55,7 +64,7 @@ void set_payload(Response *self, char *filename) {
     }
 
     fgets(self->payload, BUFF_SIZE, file);
-    printf("%s\n", self->payload);
+    self->content_len = strnlen(self->payload, BUFF_SIZE);
 
     fclose(file);
 }
@@ -118,12 +127,6 @@ void set_status(Response *self, StatusCode status_code) {
 }
 
 
-Response generate_response(Request req) {
-    Response res = init_res();
-
-
-    return res;
-}
 
 void set_method(Request *req, char *method) {
     switch(method[0]) {
