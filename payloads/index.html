@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang=en>
+    <head>
+        <meta charset="utf-8"/>
+        <meta name="description" content="Simple site"/>
+        <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+        <title>Server | Hello</title>
+        <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+    </head>
+    <body>
+        <a href="http://localhost:8080/hello">
+            Redirect Hello
+        </a>
+        <button hx-post="/hello" hx-swap="outerHTML">
+            SPA Hello
+        </button>
+    </body>
+</html>
