@@ -10,11 +10,40 @@
 Response generate_response(Request req) {
     Response res = init_res();
 
-    if (strncmp(req.version, VERSION, sizeof(VERSION)) != 0) {
-        res.set_status(&res, HTTP_VERSION_NOT_SUPPORTED);
+    // error handling
+    if (req.method == INVALID_METHOD) {
+        res.set_status(&res, BAD_REQUEST);
         return res;
     }
-    res.set_payload(&res, "hello.txt");
+
+    char* v = strchr(req.version, '/');
+    v = &v[1];
+    if (v[0] != '1') {
+        res.set_status(&res, HTTP_VERSION_NOT_SUPPORTED);
+        res.set_payload(&res, "err_http_version_not_supported.txt");
+        return res;
+    }
+
+    if (strnlen(req.path, BUFF_SIZE) == BUFF_SIZE) {
+        res.set_status(&res, URI_TOO_LONG);
+        return res;
+    }
+
+    if (
+        req.content_type == INVALID_TYPE 
+        && (req.method != GET && req.method != HEAD)
+    ) {
+        res.set_status(&res, UNSUPPORTED_MEDIA_TYPE);
+        return res;
+    }
+
+
+    // serve request
+    if (strncmp(req.path, "/", sizeof("/")) == 0) {
+        res.set_payload(&res, "hello.html");
+    } else {
+        res.set_payload(&res, "err_not_found.html");
+    }
 
 
     return res;
@@ -57,13 +86,28 @@ void set_payload(Response *self, char *filename) {
     // set payload
     FILE *file = fopen(path, "r");
     if (file == NULL) {
-        char str[50];
-        snprintf(str, sizeof(str), "\"%s\" could not be found", path);
+        char str[128];
+        snprintf(str, sizeof(str), "set_payload: \"%s\" could not be found", path);
         print_info(ERROR, str);
+        self->set_status(self, INTERNAL_SERVER_ERROR);
+        self->set_payload(self, "err_internal_server.html");
         return;
     }
 
-    fgets(self->payload, BUFF_SIZE, file);
+    char c;
+    int i = 0;
+    while ((c = fgetc(file)) != EOF) {
+        if (i > BUFF_SIZE) {
+            char str[128];
+            snprintf(str, sizeof(str), "set_payload: content in \"%s\" exceeds BUFF_SIZE (%d)", path, BUFF_SIZE);
+            print_info(ERROR, str);
+            self->set_status(self, INTERNAL_SERVER_ERROR);
+            self->set_payload(self, "err_internal_server.html");
+            return;
+        }
+        self->payload[i] = c;
+        i++;
+    }
     self->content_len = strnlen(self->payload, BUFF_SIZE);
 
     fclose(file);

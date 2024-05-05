@@ -1,6 +1,7 @@
 #include "include/http.h"
 #include "include/style.h"
 #include "include/connect.h"
+#include <errno.h>
 #include <string.h>
 #include <unistd.h>
 #include <arpa/inet.h>
@@ -102,11 +103,55 @@ void connect_client(Server *server) {
     char term_out[50];
 
     if (free_slot == -1) {
-        // TODO: Add real response
         Response res = init_res();
+        res.set_payload(&res, "err_server_full.txt");
 
-        if (send(server->conn_fd, &res, sizeof(res), MSG_CONFIRM) == -1) {
-            perror("send");
+        char* res_msg = calloc(2, BUFF_SIZE); 
+
+        // response to string
+        strncat(res_msg, res.version, sizeof(char) * strlen(res.version));
+        strncat(res_msg, " ", sizeof(" "));
+        char status_code[3] = {0};
+        sprintf(status_code,"%d", res.status_code);
+        strncat(res_msg, status_code, strlen(status_code));
+        strncat(res_msg, " ", sizeof(" "));
+        strncat(res_msg, res.status_msg, sizeof(char) * strlen(res.status_msg));
+        strncat(res_msg, "\r\n", sizeof("\r\n"));
+        strncat(res_msg, "Server: C\r\n", sizeof("Server: C\r\n"));
+        strncat(res_msg, "Date: ", sizeof("Date: "));
+        strncat(res_msg, res.date, sizeof(char) * strlen(res.date)-1);
+        strncat(res_msg, " GMT", sizeof(" GMT"));
+        strncat(res_msg, "\r\n", sizeof("\r\n"));
+
+        if (strnlen(res.payload, BUFF_SIZE) > 0 && res.content_type != INVALID_TYPE) {
+            strncat(res_msg, "Content-Type: ", sizeof("Content-Type: "));
+            switch(res.content_type) {
+                case TEXT:
+                    strncat(res_msg, "text/plain\r\n", sizeof("text/plain\r\n"));
+                    break;
+                case JSON:
+                    strncat(res_msg, "application/json\r\n", sizeof("application/json\r\n"));
+                    break;
+                case HTML:
+                    strncat(res_msg, "text/html\r\n", sizeof("text/html\r\n"));
+                    break;
+                default: break;
+            }
+            strncat(res_msg, "Content-Length: ", sizeof("Content-Length: "));
+            char content_len[5] = {0};
+            sprintf(content_len, "%lu", strnlen(res.payload, BUFF_SIZE));
+            strncat(res_msg, content_len, 5);
+            strncat(res_msg, "\r\n\r\n", sizeof("\r\n\r\n"));
+            strncat(res_msg, res.payload, sizeof(char) * strnlen(res.payload, BUFF_SIZE));
+            strncat(res_msg, "\r\n", sizeof("\r\n"));
+        }
+        strncat(res_msg, "\r\n", sizeof("\r\n"));
+        printf("%s\n", res_msg);
+
+        if (send(server->conn_fd, res_msg, sizeof(char) * strlen(res_msg), MSG_CONFIRM) == -1) {
+            char str[50];
+            snprintf(str, sizeof(str), "connect_client: send: %s\n", strerror(errno));
+            print_info(ERROR, str);
         }
         close(server->conn_fd);
     } else {
@@ -175,7 +220,8 @@ Server handle_client(Server *server, int socket) {
         strncat(res_msg, "\r\n", sizeof("\r\n"));
         strncat(res_msg, "Server: C\r\n", sizeof("Server: C\r\n"));
         strncat(res_msg, "Date: ", sizeof("Date: "));
-        strncat(res_msg, res.date, sizeof(char) * strlen(res.date));
+        strncat(res_msg, res.date, sizeof(char) * strlen(res.date)-1);
+        strncat(res_msg, " GMT", sizeof(" GMT"));
         strncat(res_msg, "\r\n", sizeof("\r\n"));
 
         if (strnlen(res.payload, BUFF_SIZE) > 0 && res.content_type != INVALID_TYPE) {
@@ -203,8 +249,10 @@ Server handle_client(Server *server, int socket) {
         strncat(res_msg, "\r\n", sizeof("\r\n"));
         printf("%s\n", res_msg);
 
-        if (send(server->clients[slot].fd, res_msg, sizeof(char) * strlen(res_msg), 0) == -1) {
-            perror("send");
+        if (send(server->clients[slot].fd, res_msg, sizeof(char) * strlen(res_msg), MSG_CONFIRM) == -1) {
+            char str[50];
+            snprintf(str, sizeof(str), "handle_client: send: %s\n", strerror(errno));
+            print_info(ERROR, str);
         }
 
         free(res_msg);
