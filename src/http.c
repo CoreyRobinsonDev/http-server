@@ -40,6 +40,8 @@ Response generate_response(Request req) {
 
     // serve request
     if (strncmp(req.path, "/", sizeof("/")) == 0) {
+        res.set_payload(&res, "index.html");
+    } else if (strncmp(req.path, "/hello", sizeof("/hello")) == 0) {
         res.set_payload(&res, "hello.html");
     } else {
         res.set_payload(&res, "err_not_found.html");
@@ -62,9 +64,14 @@ Response init_res() {
         .payload = {0},
         .set_status = set_status,
         .set_payload = set_payload,
+        .set_location = set_location,
     };
 
     return res;
+}
+
+void set_location(Response *self, char *path) {
+    strncpy(self->location, path, sizeof(char) * URI_MAX_BUFF);
 }
 
 void set_payload(Response *self, char *filename) {
@@ -124,6 +131,9 @@ void set_status(Response *self, StatusCode status_code) {
             break;
         case NO_CONTENT:
             self->status_msg = "No Content";
+            break;
+        case REDIRECTION:
+            self->status_msg = "Moved Permanently";
             break;
         case BAD_REQUEST:
             self->status_msg = "Bad Request";
@@ -193,6 +203,7 @@ void set_method(Request *req, char *method) {
 
 void set_content_type(Request *req, char *content_type) {
     char *json = "application/json";
+    char *htmx = "application/x-www-form-urlencoded";
     char *html = "text/html";
     char *text = "text/plain";
 
@@ -201,6 +212,8 @@ void set_content_type(Request *req, char *content_type) {
         req->content_type = JSON;
     } else if (strncmp(content_type, html, sizeof(char) * strlen(html)) == 0) {
         req->content_type = HTML;
+    } else if (strncmp(content_type, htmx, sizeof(char) * strlen(htmx)) == 0) {
+        req->content_type = HTMX;
     } else if (strncmp(content_type, text, sizeof(char) * strlen(text)) == 0) {
         req->content_type = TEXT;
     }
@@ -299,6 +312,7 @@ Request parse_req(char *req_buf) {
             }
         }
     }
+    printf("%s\n", req_buf);
 
     print_req(req);
 
@@ -308,7 +322,7 @@ Request parse_req(char *req_buf) {
 // Prints given [Request];
 void print_req(Request req) {
     char method[10];
-    char content_type[40];
+    char content_type[64];
 
     switch (req.method) {
         case GET: strncpy(method, "GET", 10); break;
@@ -324,10 +338,11 @@ void print_req(Request req) {
     }
 
     switch (req.content_type) {
-        case JSON: strncpy(content_type, "application/json", 40); break;
-        case HTML: strncpy(content_type, "text/html", 40); break;
-        case TEXT: strncpy(content_type, "text/plain", 40); break;
-        case INVALID_TYPE: strncpy(content_type, "INVALID", 40); break;
+        case JSON: strncpy(content_type, "application/json", 64); break;
+        case HTML: strncpy(content_type, "text/html", 64); break;
+        case HTMX: strncpy(content_type, "application/x-www-form-urlencoded", 64); break;
+        case TEXT: strncpy(content_type, "text/plain", 64); break;
+        case INVALID_TYPE: strncpy(content_type, "INVALID", 64); break;
     }
 
     printf("Request {\n");

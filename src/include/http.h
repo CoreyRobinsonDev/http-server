@@ -29,12 +29,14 @@ typedef enum: uint8_t {
     JSON,       // application/json
     HTML,       // text/html
     TEXT,       // text/plain
+    HTMX,       // application/x-www-form-urlencoded
 } ContentType;
 
 #define STATUS_CODES\
     X(OK,200)\
     X(CREATED,201)\
     X(NO_CONTENT,204)\
+    X(REDIRECTION,301)\
     X(BAD_REQUEST,400)\
     X(UNAUTHORIZED,401)\
     X(FORBIDDEN,403)\
@@ -64,13 +66,14 @@ typedef struct {
     char path[URI_MAX_BUFF+1];
     char version[16];
     int content_len;
-    char cookies[MAX_COOKIES][MAX_COOKIE_BUFF];
+    char cookies[MAX_COOKIES][MAX_COOKIE_BUFF+1];
     char host[64];
 } Request;
 
 typedef struct response_t {
     char version[16];
     StatusCode status_code;
+    char location[URI_MAX_BUFF+1];
     char* status_msg;
     char* date;
     char server;
@@ -79,6 +82,7 @@ typedef struct response_t {
     char payload[BUFF_SIZE+1];
     void (*set_status)(struct response_t* self, StatusCode);
     void (*set_payload)(struct response_t* self, char*);
+    void (*set_location)(struct response_t* self, char*);
 } Response;
 
 Request parse_req(char *req_buf);
@@ -89,6 +93,7 @@ void print_res(Response res);
 Response init_res();
 void set_status(Response* self, StatusCode status_code);
 void set_payload(Response* self, char* filename);
+void set_location(Response* self, char* path);
 
 
 #endif // !HTTP_H

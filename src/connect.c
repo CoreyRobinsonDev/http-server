@@ -220,9 +220,15 @@ Server handle_client(Server *server, int socket) {
         strncat(res_msg, "\r\n", sizeof("\r\n"));
         strncat(res_msg, "Server: C\r\n", sizeof("Server: C\r\n"));
         strncat(res_msg, "Date: ", sizeof("Date: "));
-        strncat(res_msg, res.date, sizeof(char) * strlen(res.date)-1);
+        strncat(res_msg, res.date, sizeof(char) * strlen(res.date)-1); // -1 is to drop the \n character
         strncat(res_msg, " GMT", sizeof(" GMT"));
         strncat(res_msg, "\r\n", sizeof("\r\n"));
+
+        if (res.status_code == REDIRECTION) {
+            strncat(res_msg, "Location: ", sizeof("Location: "));
+            strncat(res_msg, res.location, sizeof(char) * strlen(res.location));
+            strncat(res_msg, "\r\n", sizeof("\r\n"));
+        }
 
         if (strnlen(res.payload, BUFF_SIZE) > 0 && res.content_type != INVALID_TYPE) {
             strncat(res_msg, "Content-Type: ", sizeof("Content-Type: "));
