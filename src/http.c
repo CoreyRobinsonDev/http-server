@@ -43,6 +43,8 @@ Response generate_response(Request req) {
         res.set_payload(&res, "index.html");
     } else if (strncmp(req.path, "/hello", sizeof("/hello")) == 0) {
         res.set_payload(&res, "hello.html");
+    } else if (strncmp(req.path, "/reset.css", sizeof("/reset.css")) == 0) {
+        res.set_payload(&res, "reset.css");
     } else {
         res.set_payload(&res, "err_not_found.html");
     }
@@ -88,6 +90,8 @@ void set_payload(Response *self, char *filename) {
         self->content_type = JSON;
     } else if (strncmp(extension, "html", sizeof("html")) == 0) {
         self->content_type = HTML;
+    } else if (strncmp(extension, "css", sizeof("css")) == 0) {
+        self->content_type = CSS;
     }
 
     // set payload
@@ -206,6 +210,7 @@ void set_content_type(Request *req, char *content_type) {
     char *htmx = "application/x-www-form-urlencoded";
     char *html = "text/html";
     char *text = "text/plain";
+    char *css = "text/css";
 
     req->content_type = INVALID_TYPE;
     if (strncmp(content_type, json, sizeof(char) * strlen(json)) == 0) {
@@ -216,6 +221,8 @@ void set_content_type(Request *req, char *content_type) {
         req->content_type = HTMX;
     } else if (strncmp(content_type, text, sizeof(char) * strlen(text)) == 0) {
         req->content_type = TEXT;
+    } else if (strncmp(content_type, css, sizeof(char) * strlen(css)) == 0) {
+        req->content_type = CSS;
     }
 }
 
@@ -340,6 +347,7 @@ void print_req(Request req) {
     switch (req.content_type) {
         case JSON: strncpy(content_type, "application/json", 64); break;
         case HTML: strncpy(content_type, "text/html", 64); break;
+        case CSS: strncpy(content_type, "text/css", 64); break;
         case HTMX: strncpy(content_type, "application/x-www-form-urlencoded", 64); break;
         case TEXT: strncpy(content_type, "text/plain", 64); break;
         case INVALID_TYPE: strncpy(content_type, "INVALID", 64); break;

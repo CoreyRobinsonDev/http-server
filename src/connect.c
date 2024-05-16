@@ -135,6 +135,9 @@ void connect_client(Server *server) {
                 case HTML:
                     strncat(res_msg, "text/html\r\n", sizeof("text/html\r\n"));
                     break;
+                case CSS:
+                    strncat(res_msg, "text/css\r\n", sizeof("text/css\r\n"));
+                    break;
                 default: break;
             }
             strncat(res_msg, "Content-Length: ", sizeof("Content-Length: "));
@@ -153,6 +156,8 @@ void connect_client(Server *server) {
             snprintf(str, sizeof(str), "connect_client: send: %s\n", strerror(errno));
             print_info(ERROR, str);
         }
+
+        free(res_msg);
         close(server->conn_fd);
     } else {
         server->clients[free_slot].fd = server->conn_fd;
@@ -210,6 +215,8 @@ Server handle_client(Server *server, int socket) {
         char* res_msg = calloc(2, BUFF_SIZE); 
 
         // response to string
+        // this is the 2nd place I do this
+        // TODO: ^^ change that
         strncat(res_msg, res.version, sizeof(char) * strlen(res.version));
         strncat(res_msg, " ", sizeof(" "));
         char status_code[3] = {0};
@@ -241,6 +248,9 @@ Server handle_client(Server *server, int socket) {
                     break;
                 case HTML:
                     strncat(res_msg, "text/html\r\n", sizeof("text/html\r\n"));
+                    break;
+                case CSS:
+                    strncat(res_msg, "text/css\r\n", sizeof("text/css\r\n"));
                     break;
                 default: break;
             }

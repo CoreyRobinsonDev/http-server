@@ -28,6 +28,7 @@ typedef enum: uint8_t {
     INVALID_TYPE,
     JSON,       // application/json
     HTML,       // text/html
+    CSS,        // text/css
     TEXT,       // text/plain
     HTMX,       // application/x-www-form-urlencoded
 } ContentType;
