@@ -116,6 +116,10 @@ void set_payload(Response *self, char *filename) {
             self->set_payload(self, "err_internal_server.html");
             return;
         }
+        if (c == '\n' || c == '\t' || (c == ' ' && self->payload[i-1] == ' ')) {
+            continue;
+        }
+
         self->payload[i] = c;
         i++;
     }
