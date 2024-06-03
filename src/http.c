@@ -7,6 +7,9 @@
 #include <stdio.h>
 #include <string.h>
 
+
+
+
 Response generate_response(Request req) {
     Response res = init_res();
 
