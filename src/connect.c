@@ -9,7 +9,6 @@
 #include <stdlib.h>
 
 
-
 // Return free slot or -1 if server is full
 int find_free_slot(Server server) {
     for (int i = 0; i < MAX_CLIENTS; i++) {
